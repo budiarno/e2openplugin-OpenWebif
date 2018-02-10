@@ -359,6 +359,9 @@ def getAllInfo():
 		elif procmodel == "sf4008":
 			brand = "Octagon"
 			model = procmodel
+		elif procmodel == "u5":
+			brand = "Vivant"
+			model = "Dinobot 4K"
 	elif fileExists("/proc/stb/info/model"):
 		f = open("/proc/stb/info/model",'r')
 		procmodel = f.readline().strip().lower()
