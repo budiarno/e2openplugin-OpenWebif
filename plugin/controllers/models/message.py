@@ -8,14 +8,16 @@
 #               published by the Free Software Foundation.                   #
 #                                                                            #
 ##############################################################################
-from Plugins.Extensions.OpenWebif.__init__ import _
 from Screens.MessageBox import MessageBox
+from ..i18n import _
 
 lastreply = None
+
 
 def messageReply(reply):
 	global lastreply
 	lastreply = reply
+
 
 def sendMessage(session, message, ttype, timeout):
 	global lastreply
@@ -32,6 +34,7 @@ def sendMessage(session, message, ttype, timeout):
 		"result": True,
 		"message": _('Message sent successfully!')
 	}
+
 
 def getMessageAnswer():
 	global lastreply

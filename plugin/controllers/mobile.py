@@ -1,34 +1,47 @@
 # -*- coding: utf-8 -*-
 
-##############################################################################
-#                        2011 E2OpenPlugins                                  #
-#                                                                            #
-#  This file is open source software; you can redistribute it and/or modify  #
-#     it under the terms of the GNU General Public License version 2 as      #
-#               published by the Free Software Foundation.                   #
-#                                                                            #
-##############################################################################
+##########################################################################
+# OpenWebif: MobileController
+##########################################################################
+# Copyright (C) 2011 - 2018 E2OpenPlugins
+#
+# This program is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+##########################################################################
+
 from base import BaseController
 from models.movies import getMovieList
 from models.timers import getTimers
 from models.services import getBouquets, getChannels, getChannelEpg, getEvent, getPicon
-from models.info import getTranscodingSupport
 from urllib import quote
 from time import localtime, strftime
 
+from defaults import TRANSCODING
+
 
 class MobileController(BaseController):
-	def __init__(self, session, path = ""):
+	"""
+	Mobile Web Controller
+	"""
+	def __init__(self, session, path=""):
 		BaseController.__init__(self, path=path, session=session, isMobile=True)
 
-	def P_index(self, request):
-		return {}
-
-	def P_control(self, request):
-		return {}
-
-	def P_screenshot(self, request):
-		return {}
+	def NoDataRender(self):
+		"""
+		mobile requests with no extra data
+		"""
+		return ['index', 'control', 'screenshot', 'satfinder', 'about']
 
 	def P_bouquets(self, request):
 		stype = "tv"
@@ -44,14 +57,14 @@ class MobileController(BaseController):
 		if "id" in request.args.keys():
 			idbouquet = request.args["id"][0]
 		channels = getChannels(idbouquet, stype)
-		channels['transcoding'] = getTranscodingSupport()
+		channels['transcoding'] = TRANSCODING
 		return channels
 
 	def P_channelinfo(self, request):
 		channelinfo = {}
 		channelepg = {}
 		if "sref" in request.args.keys():
-			sref=request.args["sref"][0]
+			sref = request.args["sref"][0]
 			channelepg = getChannelEpg(sref)
 			# Detect if sRef contains a stream
 			if ("://" in sref):
@@ -77,10 +90,10 @@ class MobileController(BaseController):
 		# Got EPG information?
 		if len(channelepg['events']) > 1:
 			# Return the EPG
-			return { "channelinfo": channelepg["events"][0], "channelepg": channelepg["events"] }
+			return {"channelinfo": channelepg["events"][0], "channelepg": channelepg["events"]}
 		else:
 			# Make sure at least some basic channel info gets returned when there is no EPG
-			return { "channelinfo": channelinfo, "channelepg": None }
+			return {"channelinfo": channelinfo, "channelepg": None}
 
 	def P_eventview(self, request):
 		event = {}
@@ -108,18 +121,12 @@ class MobileController(BaseController):
 			event['begin'] = strftime("%H:%M", (localtime(event['begin'])))
 			event['end'] = strftime("%H:%M", (localtime(event['end'])))
 
-		return { "event": event }
-
-	def P_satfinder(self, request):
-		return {}
+		return {"event": event}
 
 	def P_timerlist(self, request):
 		return getTimers(self.session)
 
 	def P_movies(self, request):
 		movies = getMovieList(request.args)
-		movies['transcoding'] = getTranscodingSupport()
+		movies['transcoding'] = TRANSCODING
 		return movies
-		
-	def P_about(self, request):
-		return {}

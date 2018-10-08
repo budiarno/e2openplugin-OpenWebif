@@ -1,5 +1,4 @@
-#from Plugins.Extensions.OpenWebif.local import tstrings
-
+#from Plugins.Extensions.OpenWebif.controllers.i18n import tstrings
 <style>
 .t,.t2,.t3 { display:table;width: 100%; padding-bottom:10px;background-image:none;}
 .t3.ui-widget-content,.t2.ui-widget-content,.t.ui-widget-content { border:none;}
@@ -181,11 +180,10 @@ $('#editTimerForm').dialog({
 					repeated += parseInt($(this).val());
 				});
 				var tags = "";
-				$('[name="tagsnew"]:checked').each(function() {
+				$('#tagsnew').children("input:checked").each(function() {
 					if(tags!="")
 						tags+=" ";
 					tags += $(this).val();
-					
 				});
 				var urldata = { sRef: $('#bouquet_select').val(),
 					end: Math.round(enddate.getTime() / 1000),

@@ -1,9 +1,9 @@
 //******************************************************************************
 //* at.js: openwebif Autotimer plugin
-//* Version 2.6
+//* Version 2.7
 //******************************************************************************
-//* Copyright (C) 2014-2017 Joerg Bleyel
-//* Copyright (C) 2014-2017 E2OpenPlugins
+//* Copyright (C) 2014-2018 Joerg Bleyel
+//* Copyright (C) 2014-2018 E2OpenPlugins
 //*
 //* V 1.0 - Initial Version
 //* V 1.1 - Support translation, small ui fixes
@@ -22,6 +22,7 @@
 //* V 2.4 - fix simulate
 //* V 2.5 - add test api / fix counter
 //* V 2.6 - add rec+zap timer support
+//* V 2.7 - backup / restore
 //*
 //* Authors: Joerg Bleyel <jbleyel # gmx.net>
 //* 		 plnick
@@ -31,7 +32,7 @@
 //* https://github.com/E2OpenPlugins/e2openplugin-OpenWebif/blob/master/LICENSE.txt
 //*******************************************************************************
 
-// TODO: backup/restore at, some error handler
+// TODO: some error handler
 
 function toUnixDate(date){
 	var datea = date.split('.');
@@ -105,16 +106,16 @@ function initValues () {
 	});
 	$('.date').each(function(index,element){
 		$('<span style="display: inline-block">').addClass('ui-icon ui-icon-calendar').insertAfter(element).position({
-			of: element
-			,my: 'right top'
-			,at: 'right top+2'
+			of: element,
+			my: 'right top',
+			at: 'right top+2'
 		});
 	});
 	$('.time').each(function(index,element){
 		$('<span style="display: inline-block">').addClass('ui-icon ui-icon-clock').insertAfter(element).position({
-			of: element
-			,my: 'right top'
-			,at: 'right top+2'
+			of: element,
+			my: 'right top',
+			at: 'right top+2'
 		});
 	});
 	$("#bouquets").chosen({disable_search_threshold: 10,no_results_text: "Oops, nothing found!",width: "80%"});
@@ -266,6 +267,9 @@ function InitPage() {
 	$("#atbutton8").click(function () { getAutoTimerSettings(); });
 	// TODO: icons
 
+	$("#atbutton9").click(function () { exportAT(); });
+	$("#atbutton10").click(function () { importAT(); });
+
 	$('#statuscont').hide();
 	$("#simdlg").dialog({
 		modal : true, 
@@ -285,7 +289,7 @@ function InitPage() {
 	});
 	
 	
-	var buttons = {}
+	var buttons = {};
 	buttons["Save"] = function() {setAutoTimerSettings(); $(this).dialog("close");};
 	buttons["Cancel"] = function() {$(this).dialog("close");};
 	
@@ -314,6 +318,11 @@ function InitPage() {
 			nf.find(".FI").show();
 		}
 	});
+	
+	$("#rfile").change(function() {
+		prepareRestore($(this));
+	});
+
 }
 
 var atxml;
@@ -328,7 +337,7 @@ function isBQ(sref)
 function Parse() {
 	$("#atlist").empty();
 	
-	var atlist = []
+	var atlist = [];
 	
 	var state=$(atxml).find("e2state").first();
 	if (state.text() == 'false') {
@@ -490,7 +499,7 @@ function AutoTimerObj (xml) {
 
 	this.avoidDuplicateDescription="0";
 	if(xml.attr("avoidDuplicateDescription"))
-		this.avoidDuplicateDescription=xml.attr("avoidDuplicateDescription")
+		this.avoidDuplicateDescription=xml.attr("avoidDuplicateDescription");
 
 	this.location=null;
 	if(xml.attr("location")) 
@@ -725,11 +734,11 @@ function addAT(evt)
 	if (typeof evt !== 'undefined') 
 	{
 		xml = '<timers><timer name="'+evt.name+'" match="'+evt.name+'" enabled="yes" id="'+id+'" from="'+evt.from+'" to="'+evt.to+'"';
-		xml += ' searchType="exact" searchCase="sensitive" justplay="0" overrideAlternatives="1" '
+		xml += ' searchType="exact" searchCase="sensitive" justplay="0" overrideAlternatives="1" ';
 		xml += '><e2service><e2servicereference>'+evt.sref+'</e2servicereference><e2servicename>'+evt.sname+'</e2servicename></e2service>';
 		xml += '</timer></timers>';
 	}
-	var xmlDoc = $.parseXML( xml )
+	var xmlDoc = $.parseXML( xml );
 	
 	$(xmlDoc).find("timer").each(function () {
 		$( "#atlist" ).append($('<li></li>').html($(this).attr("name")).data('id',$(this).attr("id")));
@@ -946,7 +955,7 @@ function saveAT()
 
 		if(CurrentAT.Filters && CurrentAT.Filters.length > 0) {
 			$.each( CurrentAT.Filters, function( index, value ){
-				var fr = "&"
+				var fr = "&";
 				if(value.t === "exclude")
 					fr+="!";
 				fr += value.w;
@@ -1025,7 +1034,7 @@ function test_simulateAT(simulate)
 				line += '<td>' + $(this).find('e2name').text() + '</td>';
 				line += '<td>' + $(this).find('e2servicename').text() + '</td>';
 				var s = $(this).find('e2timebegin').text();
-				var d = new Date(Math.round(s) * 1000)
+				var d = new Date(Math.round(s) * 1000);
 				var h = d.getHours();
 				var m = d.getMinutes();
 				var _h = ((h>9) ? '':'0') + h.toString();
@@ -1033,7 +1042,7 @@ function test_simulateAT(simulate)
 				s = (d.getMonth()+1) + '/' + d.getDate() + '/' + d.getFullYear() + ' ' + _h + ':' + _m;
 				line += '<td>' + s + '</td>';
 				s = $(this).find('e2timeend').text();
-				d = new Date(Math.round(s) * 1000)
+				d = new Date(Math.round(s) * 1000);
 				h = d.getHours();
 				m = d.getMinutes();
 				var _h = ((h>9) ? '':'0') + h.toString();
@@ -1193,4 +1202,86 @@ function showError(txt,st)
 	}
 	
 }
+
+function importAT () {
+	$("#rfile").trigger('click');
+}
+
+function prepareRestore (ff) {
+	var fn = ff.val()
+	fn = fn.replace('C:\\fakepath\\','');
+	if (confirm(tstr_bqe_restore_question + ' ( ' + fn + ') ?') === false) {
+		return;
+	}
+
+	$('form#uploadrestore')
+		.unbind('submit')
+		.submit(function (_e) 
+	{
+		var formData = new FormData(this);
+		$.ajax({
+			url: '/autotimer/uploadrestore',
+			type: 'POST',
+			data:  formData,
+			mimeType:"multipart/form-data",
+			contentType: false,
+			cache: false,
+			processData:false,
+			dataType: 'json',
+			success: function (data, textStatus, jqXHR) {
+				var r = data.Result;
+				if (r[0]) {
+					doRestore(r[1]);
+				} else {
+					showError("Upload File: " + textStatus);
+				}
+			},
+			error: function (jqXHR, textStatus, errorThrown) {
+				showError("Upload File Error: " + errorThrown);
+			}
+		});
+		_e.preventDefault();
+		try {
+			_e.unbind();
+		} catch(ex){}
+	});
+	$('form#uploadrestore').submit();
+}
+
+function doRestore (fn) {
+	if (fn) {
+		$.ajax({
+			url: '/autotimer/restore',
+			dataType: 'xml',
+			cache: false,
+			success: function ( xml ) {
+				var state=$(xml).find("e2state").first();
+				var txt=$(xml).find("e2statetext").first();
+				showError(txt.text(),state.text());
+			}
+		});
+	}
+}
+
+function exportAT () {
+	if (confirm('export AT ?') === false) {
+		return;
+	}
+	$.ajax({
+		url: '/autotimer/backup',
+		dataType: 'xml',
+		cache: false,
+		data: { }, 
+		success: function ( xml ) {
+			var state=$(xml).find("e2state").first();
+			if (state.text() == 'false') {
+				showError($(xml).find("e2statetext").first().text());
+			} else {
+				var url = "/autotimer/tmp/autotimer_backup.tar";
+				window.open(url,'Download');
+			}
+		}
+	});
+}
+
 //# sourceURL=js/at.js

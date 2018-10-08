@@ -14,23 +14,25 @@ from Screens.MessageBox import MessageBox
 from Components.config import config
 from Tools.Directories import fileExists
 from twisted.internet import reactor, ssl
-from twisted.web import server, http, static, resource, error, version
+from twisted.web import server, http, resource, version
+#from twisted.web import server, http, static, resource, error, version
 from twisted.internet.error import CannotListenError
+from twisted.internet.protocol import Factory, Protocol
 
 from controllers.root import RootController
 from sslcertificate import SSLCertificateGenerator, KEY_FILE, CERT_FILE, CA_FILE
-from socket import gethostname, has_ipv6
+from socket import has_ipv6
 from OpenSSL import SSL
-from twisted.internet.protocol import Factory, Protocol
 from Components.Network import iNetwork
 
 import os
 import imp
-import re
+#import re
 import ipaddress
 
 global listener, server_to_stop, site
 listener = []
+
 
 def getAllNetworks():
 	tempaddrs = []
@@ -68,6 +70,7 @@ def getAllNetworks():
 	else:
 		return tempaddrs
 
+
 def verifyCallback(connection, x509, errnum, errdepth, ok):
 	if not ok:
 		print '[OpenWebif] Invalid cert from subject: ', x509.get_subject()
@@ -76,12 +79,14 @@ def verifyCallback(connection, x509, errnum, errdepth, ok):
 		print '[OpenWebif] Successful cert authed as: ', x509.get_subject()
 	return True
 
+
 def isOriginalWebifInstalled():
 	pluginpath = enigma.eEnv.resolve('${libdir}/enigma2/python/Plugins/Extensions/WebInterface/plugin.py')
 	if fileExists(pluginpath) or fileExists(pluginpath + "o") or fileExists(pluginpath + "c"):
 		return True
 
 	return False
+
 
 def buildRootTree(session):
 	root = RootController(session)
@@ -115,13 +120,13 @@ def buildRootTree(session):
 			if not os.path.exists(origwebifpath + "/WebChilds/External"):
 				os.makedirs(origwebifpath + "/WebChilds/External")
 			open(origwebifpath + "/__init__.py", "w").close()
- 			open(origwebifpath + "/WebChilds/__init__.py", "w").close()
- 			open(origwebifpath + "/WebChilds/External/__init__.py", "w").close()
+			open(origwebifpath + "/WebChilds/__init__.py", "w").close()
+			open(origwebifpath + "/WebChilds/External/__init__.py", "w").close()
 
 			os.symlink(hookpath, origwebifpath + "/WebChilds/Toplevel.py")
 
 		# import modules
-#		print "[OpenWebif] loading external plugins..."
+		# print "[OpenWebif] loading external plugins..."
 		from Plugins.Extensions.WebInterface.WebChilds.Toplevel import loaded_plugins
 		if len(loaded_plugins) == 0:
 			externals = os.listdir(origwebifpath + "/WebChilds/External")
@@ -150,13 +155,20 @@ def buildRootTree(session):
 		if len(loaded_plugins) > 0:
 			for plugin in loaded_plugins:
 				root.putChild(plugin[0], plugin[1])
-#				print "[OpenWebif] plugin '%s' loaded on path '/%s'" % (plugin[2], plugin[0])
+				# print "[OpenWebif] plugin '%s' loaded on path '/%s'" % (plugin[2], plugin[0])
 		else:
 			print "[OpenWebif] no plugins to load"
 	return root
 
+
 def HttpdStart(session):
-	if config.OpenWebif.enabled.value == True:
+	"""
+	Helper class to start web server
+	
+	Args:
+		session: (?) session object
+	"""
+	if config.OpenWebif.enabled.value is True:
 		global listener, site
 		port = config.OpenWebif.port.value
 
@@ -177,14 +189,14 @@ def HttpdStart(session):
 		except CannotListenError:
 			print "[OpenWebif] failed to listen on Port %i" % (port)
 
-		if config.OpenWebif.https_clientcert.value == True and not os.path.exists(CA_FILE):
+		if config.OpenWebif.https_clientcert.value is True and not os.path.exists(CA_FILE):
 			# Disable https
 			config.OpenWebif.https_enabled.value = False
 			config.OpenWebif.https_enabled.save()
 			# Inform the user
 			session.open(MessageBox, "Cannot read CA certs for HTTPS access\nHTTPS access is disabled!", MessageBox.TYPE_ERROR)
 
-		if config.OpenWebif.https_enabled.value == True:
+		if config.OpenWebif.https_enabled.value is True:
 			httpsPort = config.OpenWebif.https_port.value
 			installCertificates(session)
 			# start https webserver on port configured port
@@ -203,7 +215,7 @@ def HttpdStart(session):
 					installCertificates(session)
 					context = ssl.DefaultOpenSSLContextFactory(KEY_FILE, CERT_FILE)
 
-				if config.OpenWebif.https_clientcert.value == True:
+				if config.OpenWebif.https_clientcert.value is True:
 					ctx = context.getContext()
 					ctx.set_verify(
 						SSL.VERIFY_PEER | SSL.VERIFY_FAIL_IF_NO_PEER_CERT,
@@ -230,7 +242,7 @@ def HttpdStart(session):
 				config.OpenWebif.https_enabled.value = False
 				config.OpenWebif.https_enabled.save()
 
-		#Streaming requires listening on 127.0.0.1:80
+		# Streaming requires listening on 127.0.0.1:80
 		if port != 80:
 			try:
 				if has_ipv6 and fileExists('/proc/net/if_inet6') and version.major >= 12:
@@ -249,8 +261,10 @@ def HttpdStart(session):
 def HttpdStop(session):
 	StopServer(session).doStop()
 
+
 def HttpdRestart(session):
 	StopServer(session, HttpdStart).doStop()
+
 
 class AuthResource(resource.Resource):
 	def __init__(self, session, root):
@@ -280,7 +294,7 @@ class AuthResource(resource.Resource):
 
 		if (host == "localhost" or host == "127.0.0.1" or host == "::ffff:127.0.0.1") and not config.OpenWebif.auth_for_streaming.value:
 			return self.resource.render(request)
-		if self.login(request.getUser(), request.getPassword(), peer) == False:
+		if self.login(request.getUser(), request.getPassword(), peer) is False:
 			request.setHeader('WWW-authenticate', 'Basic realm="%s"' % ("OpenWebif"))
 			errpage = resource.ErrorPage(http.UNAUTHORIZED,"Unauthorized","401 Authentication required")
 			return errpage.render(request)
@@ -307,7 +321,7 @@ class AuthResource(resource.Resource):
 		# Handle all conditions where auth may be skipped/disabled
 
 		# #1: Auth is disabled and access is from local network
-		if (not request.isSecure() and config.OpenWebif.auth.value == False) or (request.isSecure() and config.OpenWebif.https_auth.value == False):
+		if (not request.isSecure() and config.OpenWebif.auth.value is False) or (request.isSecure() and config.OpenWebif.https_auth.value is False):
 			networks = getAllNetworks()
 			if networks:
 				for network in networks:
@@ -315,8 +329,8 @@ class AuthResource(resource.Resource):
 						return self.resource.getChildWithDefault(path, request)
 
 		# #2: Auth is disabled and access is from private address space (Usually VPN) and access for VPNs has been granted
-		if (not request.isSecure() and config.OpenWebif.auth.value == False) or (request.isSecure() and config.OpenWebif.https_auth.value == False):
-			if config.OpenWebif.vpn_access.value == True and ipaddress.ip_address(unicode(peer)).is_private:
+		if (not request.isSecure() and config.OpenWebif.auth.value is False) or (request.isSecure() and config.OpenWebif.https_auth.value is False):
+			if config.OpenWebif.vpn_access.value is True and ipaddress.ip_address(unicode(peer)).is_private:
 				return self.resource.getChildWithDefault(path, request)
 
 		# #3: Access is from localhost and streaming auth is disabled - or - we only want to see our IPv6 (For inadyn-mt)
@@ -337,14 +351,14 @@ class AuthResource(resource.Resource):
 
 		# If we get to here, no exception applied
 		# Either block with forbidden (If auth is disabled) ...
-		if (not request.isSecure() and config.OpenWebif.auth.value == False) or (request.isSecure() and config.OpenWebif.https_auth.value == False):
+		if (not request.isSecure() and config.OpenWebif.auth.value is False) or (request.isSecure() and config.OpenWebif.https_auth.value is False):
 			return resource.ErrorPage(http.FORBIDDEN,'Forbidden','403.6 IP address rejected')
 
 		# ... or auth
 		if "logged" in session.keys() and session["logged"]:
 			return self.resource.getChildWithDefault(path, request)
 
-		if self.login(request.getUser(), request.getPassword(), peer) == False:
+		if self.login(request.getUser(), request.getPassword(), peer) is False:
 			request.setHeader('WWW-authenticate', 'Basic realm="%s"' % ("OpenWebif"))
 			return resource.ErrorPage(http.UNAUTHORIZED,"Unauthorized","401 Authentication required")
 		else:
@@ -383,11 +397,11 @@ class AuthResource(resource.Resource):
 			return crypt(passwd, cpass) == cpass
 		return False
 
-#
-# Helper class to stop running web servers; we use a class here to reduce use
-# of global variables. Resembles code prior found in HttpdStop et. al.
-# 
 class StopServer:
+	"""
+	Helper class to stop running web servers; we use a class here to reduce use
+	of global variables. Resembles code prior found in HttpdStop et. al.
+	"""
 	server_to_stop = 0
 
 	def __init__(self, session, callback=None):

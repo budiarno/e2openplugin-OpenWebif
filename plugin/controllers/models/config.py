@@ -3,12 +3,13 @@
 from enigma import eEnv
 from Components.SystemInfo import SystemInfo
 from Components.config import config
-from Tools.Directories import resolveFilename, SCOPE_CURRENT_PLUGIN, fileExists
 from os import path, listdir
-import xml.etree.cElementTree # nosec
+import xml.etree.cElementTree  # nosec
 
-from Plugins.Extensions.OpenWebif.__init__ import _
-from Plugins.Extensions.OpenWebif.controllers.utilities import get_config_attribute
+from ..i18n import _
+from ..utilities import get_config_attribute
+from datetime import datetime
+import time
 
 def addCollapsedMenu(name):
 	tags = config.OpenWebif.webcache.collapsedmenus.value.split("|")
@@ -17,7 +18,7 @@ def addCollapsedMenu(name):
 
 	config.OpenWebif.webcache.collapsedmenus.value = "|".join(tags).strip("|")
 	config.OpenWebif.webcache.collapsedmenus.save()
-	
+
 	return {
 		"result": True
 	}
@@ -38,32 +39,6 @@ def getCollapsedMenus():
 	return {
 		"result": True,
 		"collapsed": config.OpenWebif.webcache.collapsedmenus.value.split("|")
-	}
-
-def setZapStream(value):
-	config.OpenWebif.webcache.zapstream.value = value
-	config.OpenWebif.webcache.zapstream.save()
-	return {
-		"result": True
-	}
-
-def getZapStream():
-	return {
-		"result": True,
-		"zapstream": config.OpenWebif.webcache.zapstream.value
-	}
-
-def setShowChPicon(value):
-	config.OpenWebif.webcache.showchannelpicon.value = value
-	config.OpenWebif.webcache.showchannelpicon.save()
-	return {
-		"result": True
-	}
-
-def getShowChPicon():
-	return {
-		"result": True,
-		"showchannelpicon": config.OpenWebif.webcache.showchannelpicon.value
 	}
 
 def getShowName():
@@ -98,7 +73,7 @@ def getJsonFromConfig(cnf):
 			choices = []
 			for choice in cnf.choices.choices:
 				choices.append((choice, _(choice)))
-				
+
 		return {
 			"result": True,
 			"type": "select",
@@ -206,11 +181,11 @@ def getConfigs(key):
 				if "limits" in data:
 					text = "%s (%d - %d)" % (text, data["limits"][0], data["limits"][1])
 				configs.append({
-						"description": text,
-						"path": entry.text or "",
-						"data": data
-					})
-			except Exception, e:
+					"description": text,
+					"path": entry.text or "",
+					"data": data
+				})
+			except Exception:
 				pass
 	return {
 		"result": True,
@@ -243,6 +218,18 @@ def getSettings():
 		"result": True,
 		"settings": configkeyval
 	}
+	
+def getUtcOffset():
+	now = time.time()
+	offset = (datetime.fromtimestamp(now) - 
+			datetime.utcfromtimestamp(now)).total_seconds()			
+	hours = round(offset / 3600)
+	minutes = (offset - (hours * 3600))
+	return {
+		"result": True,
+		#round minutes to next quarter hour
+		"utcoffset": "{:+05}".format(int(hours * 100 + (round(minutes / 900) * 900 / 60)))
+	}
 
 class ConfigFiles:
 	def __init__(self):
@@ -257,7 +244,7 @@ class ConfigFiles:
 		locations = ('SystemPlugins', 'Extensions')
 		libdir = eEnv.resolve('${libdir}')
 		for location in locations:
-			plugins = listdir(('%s/enigma2/python/Plugins/%s' % (libdir,location)))
+			plugins = listdir(('%s/enigma2/python/Plugins/%s' % (libdir, location)))
 			for plugin in plugins:
 				setupfiles.append(('%s/enigma2/python/Plugins/%s/%s/setup.xml' % (libdir, location, plugin)))
 		for setupfile in setupfiles:
@@ -267,16 +254,16 @@ class ConfigFiles:
 	def parseConfigFiles(self):
 		sections = []
 		for setupfile in self.setupfiles:
-#			print "[OpenWebif] loading configuration file :", setupfile
+			# print "[OpenWebif] loading configuration file :", setupfile
 			setupfile = file(setupfile, 'r')
-			setupdom = xml.etree.cElementTree.parse(setupfile) # nosec
+			setupdom = xml.etree.cElementTree.parse(setupfile)  # nosec
 			setupfile.close()
 			xmldata = setupdom.getroot()
 			for section in xmldata.findall("setup"):
 				configs = []
 				requires = section.get("requires")
 				if requires and not SystemInfo.get(requires, False):
-					continue;
+					continue
 				key = section.get("key")
 				if key not in self.allowedsections:
 					showOpenWebIF = section.get("showOpenWebIF")
@@ -284,12 +271,12 @@ class ConfigFiles:
 						self.allowedsections.append(key)
 					else:
 						continue
-#				print "[OpenWebif] loading configuration section :", key
+				# print "[OpenWebif] loading configuration section :", key
 				for entry in section:
 					if entry.tag == "item":
 						requires = entry.get("requires")
 						if requires and not SystemInfo.get(requires, False):
-							continue;
+							continue
 
 						if int(entry.get("level", 0)) > config.usage.setup_level.index:
 							continue
@@ -303,5 +290,6 @@ class ConfigFiles:
 					self.section_config[key] = (title, configs)
 		sections = sorted(sections, key=lambda k: k['description'])
 		self.sections = sections
+
 
 configfiles = ConfigFiles()

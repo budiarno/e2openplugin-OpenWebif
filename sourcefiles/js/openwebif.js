@@ -1,8 +1,8 @@
 //******************************************************************************
 //* openwebif.js: openwebif base module
-//* Version 1.2.17
+//* Version 1.2.18
 //******************************************************************************
-//* Copyright (C) 2011-2017 E2OpenPlugins
+//* Copyright (C) 2011-2018 E2OpenPlugins
 //*
 //* V 1.0   - Initial Version
 //* V 1.1   - add movie move and rename
@@ -29,7 +29,8 @@
 //* V 1.2.12 - improve timer edit
 //* V 1.2.13 - fix repeating timer edit #631
 //* V 1.2.14,15,16 - fix json parse
-//* V 1.2.17 - allow timers for IPTV #715
+//* V 1.2.17 - allow timers for IPTV #715, added LCD, PiP into screenshots
+//* V 1.2.18 - rename stream.m3u8 to <channelname>.m3u8
 //*
 //* Authors: skaman <sandro # skanetwork.com>
 //* 		 meo
@@ -75,7 +76,7 @@ try {
 	});
 	
 	getStatusInfo();
-	setInterval("getStatusInfo()", 15000);
+	setInterval( function() { getStatusInfo(); }, 15000);
 
 	$( "#slider" ).slider({
 		
@@ -169,9 +170,9 @@ function initJsTranslation(strings) {
 	tstr_nothing_play = strings.nothing_play;
 	tstr_now = strings.now;
 	tstr_on = strings.on;
-	tstr_reboot_box = strings.reboot_box
+	tstr_reboot_box = strings.reboot_box;
 	tstr_rec_status = strings.rec_status;
-	tstr_restart_gui = strings.restart_gui
+	tstr_restart_gui = strings.restart_gui;
 	tstr_standby = strings.standby;
 	tstr_start_after_end = strings.start_after_end;
 	tstr_time = strings.time;
@@ -302,8 +303,8 @@ function load_dm_spinner(url,title,w,h,buttons){
 		height:height,
 		buttons:buttons,
 		create: function(event, ui) {
-	        $(event.target).parent().css('position', 'fixed');
-	    },
+			$(event.target).parent().css('position', 'fixed');
+		},
 		close: function(event, ui) { 
 			$(this).dialog('destroy');
 			$("#modaldialog").html('');
@@ -313,8 +314,8 @@ function load_dm_spinner(url,title,w,h,buttons){
 			url: url,
 			success: function(data) {
 				$("#modaldialog").html(data);
-			}
-			,error: function(){
+			},
+			error: function(){
 				$("#modaldialog").html(tstr_error_load_page);
 			}
 		});
@@ -324,7 +325,7 @@ function load_dm_spinner(url,title,w,h,buttons){
 }
 
 function load_dm(url,title,w,h){
-	var buttons = {}
+	var buttons = {};
 	buttons[tstr_close] = function() { $(this).dialog("close");};
 	var width = 'auto',height='auto';
 	if (typeof w !== 'undefined')
@@ -358,7 +359,7 @@ function load_dm(url,title,w,h){
 }
 
 function load_message_dm(url,title){
-	var buttons = {}
+	var buttons = {};
 	buttons[tstr_send_message] = function() { sendMessage();};
 	buttons[tstr_cancel] = function() { $(this).dialog("close");};
 
@@ -434,7 +435,7 @@ function open_epg_dialog(sRef,Name) {
 	var w = $(window).width() -100;
 	var h = $(window).height() -100;
 	
-	var buttons = {}
+	var buttons = {};
 	buttons[tstr_close] = function() { $(this).dialog("close");};
 	buttons[tstr_open_in_new_window] = function() { $(this).dialog("close"); open_epg_pop(sRef);};
 	
@@ -443,15 +444,15 @@ function open_epg_dialog(sRef,Name) {
 
 function open_epg_search_dialog() {
 	var spar = $("#epgSearch").val();
-	var full = GetLSValue('epgsearchtype',false) ? '&full=1' : ''
-	var bouquetsonly = GetLSValue('epgsearchbouquetsonly',false) ? '&bouquetsonly=1' : ''
+	var full = GetLSValue('epgsearchtype',false) ? '&full=1' : '';
+	var bouquetsonly = GetLSValue('epgsearchbouquetsonly',false) ? '&bouquetsonly=1' : '';
 	var url = "ajax/epgdialog?sstr=" + encodeURIComponent(spar) + full + bouquetsonly;
 	$("#epgSearch").val("");
 	
 	var w = $(window).width() -100;
 	var h = $(window).height() -100;
 	
-	var buttons = {}
+	var buttons = {};
 	buttons[tstr_close] = function() { $(this).dialog("close");};
 	buttons[tstr_open_in_new_window] = function() { $(this).dialog("close"); open_epg_search_pop(spar,full);};
 	
@@ -684,7 +685,7 @@ function webapi_execute_movie(url,callback)
 				if (!result.result)
 					alert(result.message);
 				if (typeof callback !== 'undefined') 
-					callback(result.result)
+					callback(result.result);
 			}
 		}
 	});
@@ -755,12 +756,12 @@ function setOSD( statusinfo )
 				stream += "<a href='#' onclick=\"jumper8001('" + sref + "', '" + station + "')\"; title='" + streamtitle;
 				stream += "<a href='#' onclick=\"jumper8002('" + sref + "', '" + station + "')\"; title='" + streamtitletrans;
 			} else {
-				stream += "<a target='_blank' href='/web/stream.m3u?ref=" + sref + "&name=" + station + "' title='" + streamtitle;
+				stream += "<a target='_blank' href='/web/stream.m3u?ref=" + sref + "&name=" + station + "&fname=" + station + "' title='" + streamtitle;
 			}
 			stream +="</div>";
 			$("#osd").html(stream + "<a href='#' onClick='load_maincontent(\"ajax/tv\");return false;'>" + _beginend + "<a style='text-decoration:none;' href=\"#\" onclick=\"open_epg_pop('" + sref + "')\" title='" + statusinfo['currservice_fulldescription'] + "'>" + statusinfo['currservice_name'] + "</a>");
 		} else if ((sref.indexOf("1:0:2") !== -1) || (sref.indexOf("1:134:2") !== -1)) {
-			stream += "<a target='_blank' href='/web/stream.m3u?ref=" + sref + "&name=" + station + "' title='" + streamtitle;
+			stream += "<a target='_blank' href='/web/stream.m3u?ref=" + sref + "&name=" + station + "&fname=" + station + "' title='" + streamtitle;
 			stream +="</div>";
 			$("#osd").html(stream + "<a href='#' onClick='load_maincontent(\"ajax/radio\");return false;'>" + _beginend + "<a style='text-decoration:none;' href=\"#\" onclick=\"open_epg_pop('" + sref + "')\" title='" + statusinfo['currservice_fulldescription'] + "'>" + statusinfo['currservice_name'] + "</a>");
 		} else if (sref.indexOf("1:0:0") !== -1) {
@@ -854,7 +855,11 @@ function grabScreenshot(mode) {
 	} else {
 		$('#screenshotimage').attr("src",'/grab?format=jpg&r=720&mode=' + mode + '#' + timestamp);
 	}
-	$('#screenshotimage').attr("width",720);
+	if (mode == "lcd") {
+		$('#screenshotimage').attr("width", 'auto');
+	} else {
+		$('#screenshotimage').attr("width",720);
+	}
 }
 
 function getMessageAnswer() {
@@ -957,7 +962,7 @@ $(window).keydown(function(evt) {
 });
 
 function callScreenShot(){
-
+	testPipStatus();
 	if(GetLSValue('remotegrabscreen',true))
 	{
 		if (lastcontenturl == 'ajax/screenshot') {
@@ -976,7 +981,7 @@ function pressMenuRemote(code) {
 	if (grabTimer > 0) {
 		clearTimeout(grabTimer);
 	}
-	grabTimer = setTimeout("callScreenShot()", (code > 1 && code < 12) ? 1500:1000);
+	grabTimer = setTimeout(function() { callScreenShot(); }, (code > 1 && code < 12) ? 1500:1000);
 }
 
 function toggleFullRemote() {
@@ -1026,26 +1031,26 @@ function initTimerBQ(radio, callback) {
 }
 
 function initTimerEdit(radio, callback) {
-	
-	var bottomhalf = function() {
-	$('#dirname').find('option').remove().end();
-	$('#dirname').append($("<option></option>").attr("value", "None").text("Default"));
-	for (var id in _locations) {
-		var loc = _locations[id];
-		$('#dirname').append($("<option></option>").attr("value", loc).text(loc));
-	}
 
-	$('#tagsnew').html('');
-	for (var id in _tags) {
-		var tag = _tags[id];
-		$('#tagsnew').append("<input type='checkbox' name='"+tag+"' value='"+tag+"' id='tag_"+tag+"'/><label for='tag_"+tag+"'>"+tag+"</label>");
-	}
-	
-	$("#tagsnew > input").checkboxradio({icon: false});
-	
-	timeredit_initialized = true;
+	var bottomhalf = function() {
+		$('#dirname').find('option').remove().end();
+		$('#dirname').append($("<option></option>").attr("value", "None").text("Default"));
+		for (var id in _locations) {
+			var loc = _locations[id];
+			$('#dirname').append($("<option></option>").attr("value", loc).text(loc));
+		}
+
+		$('#tagsnew').html('');
+		for (var id in _tags) {
+			var tag = _tags[id];
+			$('#tagsnew').append("<input type='checkbox' name='"+tag+"' value='"+tag+"' id='tag_"+tag+"'/><label for='tag_"+tag+"'>"+tag+"</label>");
+		}
+
+		$("#tagsnew > input").checkboxradio({icon: false});
+
+		timeredit_initialized = true;
 		callback();
-	}
+	};
 
 	initTimerBQ(radio, bottomhalf);
 }
@@ -1415,7 +1420,7 @@ function ExpandMEPG()
 	$("#refreshmepg2").show();
 	$("#header").hide();
 	$("#leftmenu").hide();
-	$('#content').css('margin-left', '5px')
+	$('#content').css('margin-left', '5px');
 	$('#tvcontentmain > #toolbar-header').hide();
 	$("#tbl1body").height('100%');
 	$("#tvcontent").css('height','100%');
@@ -1432,7 +1437,7 @@ function CompressMEPG()
 	$("#refreshmepg2").hide();
 	$("#header").show();
 	$("#leftmenu").show();
-	$('#content').css('margin-left', '185px')
+	$('#content').css('margin-left', '185px');
 	$('#tvcontentmain > #toolbar-header').show();
 	$("#tvcontent").css('height','730px');
 	$("#tvcontentmain").css('height','800px');
@@ -1668,12 +1673,14 @@ function jumper8001( sref, sname ) {
 	var deviceType = getDeviceType();
 	document.portForm.ref.value = sref;
 	document.portForm.name.value = sname;
+	document.portForm.fname.value = sname;
 	document.portForm.device.value = "etc";
 	document.portForm.submit();
 }
 
 /* Vu+ Transcoding end*/
 
+// obsolete
 function ChangeTheme(theme)
 {
 	$.ajax({
@@ -1807,13 +1814,13 @@ var MLHelper;
 						if (simg) {
 							var img = $( "<span class='sortimg'>").append (
 								$( "<i>", { "class": "fa " + simg })
-								)
+								);
 							$("#moviesort-button .ui-selectmenu-text").prepend(img);
 						}
 					}
 				});
-			}
-			,SortMovies: function(idx)
+			},
+			SortMovies: function(idx)
 			{
 				var sorted = self._movies.slice(0);
 
@@ -1892,7 +1899,7 @@ var MLHelper;
 				self._movies = mv.slice();
 			}
 		
-		}
+		};
 
 	};
 	
@@ -1922,9 +1929,9 @@ function setHover(obj)
 	var cls=getHoverCls();
 	
 	$(obj).hover(
-		function(){ $(this).addClass(cls) },
-		function(){ $(this).removeClass(cls) }
-	)
+		function(){ $(this).addClass(cls); },
+		function(){ $(this).removeClass(cls); }
+	);
 }
 
 function setTMHover()
@@ -1936,9 +1943,9 @@ function setTMHover()
 	}
 	
 	$('.tm_row').hover(
-		function(){ $(this).addClass(cls) },
-		function(){ $(this).removeClass(cls) }
-	)
+		function(){ $(this).addClass(cls); },
+		function(){ $(this).removeClass(cls); }
+	);
 }
 
 // Localstorage
@@ -1982,13 +1989,13 @@ function FillAllServices(bqs,callback)
 	var boptions = "";
 	var refs = [];
 	$.each( bqs, function( key, val ) {
-		var ref = val['servicereference']
+		var ref = val['servicereference'];
 		var name = val['servicename'];
 		boptions += "<option value='" + encodeURIComponent(ref) + "'>" + val['servicename'] + "</option>";
 		var slist = val['subservices'];
 		var items = [];
 		$.each( slist, function( key, val ) {
-			var ref = val['servicereference']
+			var ref = val['servicereference'];
 			if (!isInArray(refs,ref)) {
 				refs.push(ref);
 				if(ref.substring(0, 4) == "1:0:")
@@ -2029,9 +2036,9 @@ function GetAllServices(callback,radio)
 	date = date.getFullYear()+"-"+(date.getMonth()+1)+"-"+date.getDate();
 
 	// load allservices only once a day
-	var cache = GetLSValue(vd,'')
+	var cache = GetLSValue(vd,'');
 	if(cache === date) {
-		cache = GetLSValue(v,null)
+		cache = GetLSValue(v,null);
 		if(cache != null) {
 			var js = JSON.parse(cache);
 			var bqs = js['services'];
@@ -2043,7 +2050,7 @@ function GetAllServices(callback,radio)
 		url: '/api/getallservices?renameserviceforxmbc=1'+ru,
 		dataType: "json",
 		success: function ( data ) {
-			var sdata = JSON.stringify(data)
+			var sdata = JSON.stringify(data);
 			SetLSValue(v,sdata);
 			SetLSValue(vd,date);
 			var bqs = data['services'];
@@ -2051,6 +2058,21 @@ function GetAllServices(callback,radio)
 		}
 	});
 }
+
+function testPipStatus() {
+	$.ajax({
+		url: "api/pipinfo",
+		dataType: "json",
+		cache: false,
+		success: function(pipinfo) {
+			if(pipinfo.pip != pip){
+				pip = pipinfo.pip;
+                                buttonsSwitcher(pipinfo.pip);
+			}
+		}
+	})
+}
+
 var SSHelperObj = function () {
 	var self;
 	var screenshotInterval = false;
@@ -2063,10 +2085,13 @@ var SSHelperObj = function () {
 			clearInterval(self.screenshotInterval);
 			self.ssr_i = parseInt(GetLSValue('ssr_i','30'));
 			
-			$('#screenshotbutton0').click(function(){grabScreenshot('all');});
-			$('#screenshotbutton1').click(function(){grabScreenshot('video');});
-			$('#screenshotbutton2').click(function(){grabScreenshot('osd');});
-			
+			$('#screenshotbutton0').click(function(){testPipStatus(); grabScreenshot('all');});
+			$('#screenshotbutton1').click(function(){testPipStatus(); grabScreenshot('video');});
+			$('#screenshotbutton2').click(function(){testPipStatus(); grabScreenshot('osd');});
+			$('#screenshotbutton3').click(function(){testPipStatus(); grabScreenshot('pip');});
+			$('#screenshotbutton4').click(function(){testPipStatus(); grabScreenshot('lcd');});
+			$("#screenshotrefreshbutton").click(function(){testPipStatus();});
+
 			$('#screenshotbutton').buttonset();
 			$('#screenshotrefreshbutton').buttonset();
 			$('#ssr_i').val(self.ssr_i);
@@ -2075,11 +2100,13 @@ var SSHelperObj = function () {
 			$('#screenshotspinner').addClass(GetLSValue('spinner','fa-spinner'));
 
 			$('#ssr_hd').change(function() {
+				testPipStatus();
 				SetLSValue('ssr_hd',$('#ssr_hd').is(':checked'));
 				grabScreenshot('auto');
 			});
 		
 			$('#ssr_i').change(function() {
+				testPipStatus();
 				var t = $('#ssr_i').val();
 				SetLSValue('ssr_i',t);
 				self.ssr_i = parseInt(t);
@@ -2091,6 +2118,7 @@ var SSHelperObj = function () {
 			});
 			
 			$('#ssr_s').change(function() {
+				testPipStatus();
 				var v = $('#ssr_s').is(':checked');
 				if (v) {
 					self.setSInterval();
@@ -2108,9 +2136,9 @@ var SSHelperObj = function () {
 
 		},setSInterval: function()
 		{
-			self.screenshotInterval = setInterval("grabScreenshot('auto')", (self.ssr_i+1)*1000);
+			self.screenshotInterval = setInterval( function() { testPipStatus(); grabScreenshot('auto'); }, (self.ssr_i+1)*1000);
 		}
-	}
+	};
 };
 
 var SSHelper = new SSHelperObj();

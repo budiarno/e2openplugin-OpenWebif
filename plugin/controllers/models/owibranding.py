@@ -11,12 +11,11 @@
 # Simulate the oe-a boxbranding module (Only functions required by OWIF)     #
 ##############################################################################
 
-from Plugins.Extensions.OpenWebif.__init__ import _
-from Components.About import about
-from socket import has_ipv6
-from Tools.Directories import fileExists, pathExists
-import string
-import os, hashlib
+# from Components.About import about
+from Tools.Directories import fileExists
+from time import time
+import os
+import hashlib
 
 try:
 	from Components.About import about
@@ -28,8 +27,9 @@ try:
 	from enigma import eTPM
 	if not hasattr(eTPM, 'getData'):
 		tpmloaded = 0
-except:
+except:  # noqa: E722
 	tpmloaded = 0
+
 
 def validate_certificate(cert, key):
 	buf = decrypt_block(cert[8:], key)
@@ -37,19 +37,22 @@ def validate_certificate(cert, key):
 		return None
 	return buf[36:107] + cert[139:196]
 
+
 def get_random():
 	try:
-		xor = lambda a,b: ''.join(chr(ord(c)^ord(d)) for c,d in zip(a,b*100))
-		random = urandom(8)
+		xor = lambda a, b: ''.join(chr(ord(c) ^ ord(d)) for c, d in zip(a, b * 100))
+		random = os.urandom(8)
 		x = str(time())[-8:]
 		result = xor(random, x)
 
 		return result
-	except:
+	except:  # noqa: E722
 		return None
 
+
 def bin2long(s):
-	return reduce( lambda x,y:(x<<8L)+y, map(ord, s))
+	return reduce(lambda x, y: (x << 8L) + y, map(ord, s))
+
 
 def long2bin(l):
 	res = ""
@@ -57,8 +60,10 @@ def long2bin(l):
 		res += chr((l >> (1024 - (byte + 1) * 8)) & 0xff)
 	return res
 
+
 def rsa_pub1024(src, mod):
 	return long2bin(pow(bin2long(src), 65537, bin2long(mod)))
+
 
 def decrypt_block(src, mod):
 	if len(src) != 128 and len(src) != 202:
@@ -72,13 +77,14 @@ def decrypt_block(src, mod):
 		return dest
 	return None
 
+
 def tpm_check():
 	try:
 		tpm = eTPM()
 		rootkey = ['\x9f', '|', '\xe4', 'G', '\xc9', '\xb4', '\xf4', '#', '&', '\xce', '\xb3', '\xfe', '\xda', '\xc9', 'U', '`', '\xd8', '\x8c', 's', 'o', '\x90', '\x9b', '\\', 'b', '\xc0', '\x89', '\xd1', '\x8c', '\x9e', 'J', 'T', '\xc5', 'X', '\xa1', '\xb8', '\x13', '5', 'E', '\x02', '\xc9', '\xb2', '\xe6', 't', '\x89', '\xde', '\xcd', '\x9d', '\x11', '\xdd', '\xc7', '\xf4', '\xe4', '\xe4', '\xbc', '\xdb', '\x9c', '\xea', '}', '\xad', '\xda', 't', 'r', '\x9b', '\xdc', '\xbc', '\x18', '3', '\xe7', '\xaf', '|', '\xae', '\x0c', '\xe3', '\xb5', '\x84', '\x8d', '\r', '\x8d', '\x9d', '2', '\xd0', '\xce', '\xd5', 'q', '\t', '\x84', 'c', '\xa8', ')', '\x99', '\xdc', '<', '"', 'x', '\xe8', '\x87', '\x8f', '\x02', ';', 'S', 'm', '\xd5', '\xf0', '\xa3', '_', '\xb7', 'T', '\t', '\xde', '\xa7', '\xf1', '\xc9', '\xae', '\x8a', '\xd7', '\xd2', '\xcf', '\xb2', '.', '\x13', '\xfb', '\xac', 'j', '\xdf', '\xb1', '\x1d', ':', '?']
 		random = None
 		result = None
-		l2r = False
+		# l2r = False
 		l2k = None
 		l3k = None
 
@@ -107,12 +113,13 @@ def tpm_check():
 		if result is None:
 			return 0
 
-		if result [80:88] != random:
+		if result[80:88] != random:
 			return 0
 
 		return 1
-	except:
+	except:  # noqa: E722
 		return 0
+
 
 def getAllInfo():
 	info = {}
@@ -120,13 +127,15 @@ def getAllInfo():
 	brand = "unknown"
 	model = "unknown"
 	procmodel = "unknown"
+	grabpip = 0
+	lcd = 0
 	orgdream = 0
 	if tpmloaded:
 		orgdream = tpm_check()
 
 	if fileExists("/proc/stb/info/hwmodel"):
 		brand = "DAGS"
-		f = open("/proc/stb/info/hwmodel",'r')
+		f = open("/proc/stb/info/hwmodel", 'r')
 		procmodel = f.readline().strip()
 		f.close()
 		if (procmodel.startswith("optimuss") or procmodel.startswith("pingulux")):
@@ -146,29 +155,37 @@ def getAllInfo():
 				model = procmodel.replace("revo4k", "Revo4K")
 			elif procmodel == "galaxy4k":
 				model = procmodel.replace("galaxy4k", "Galaxy4K")
+		elif (procmodel.startswith("lunix")):
+			brand = "Qviart"
+			if procmodel == "lunix3-4k":
+				model = procmodel.replace("lunix3-4k", "Lunix3-4K")
+			elif procmodel == "lunix":
+				model = procmodel.replace("lunix", "Lunix")
 	elif fileExists("/proc/stb/info/azmodel"):
 		brand = "AZBox"
-		f = open("/proc/stb/info/model",'r') # To-Do: Check if "model" is really correct ...
+		f = open("/proc/stb/info/model", 'r')  # To-Do: Check if "model" is really correct ...
 		procmodel = f.readline().strip()
 		f.close()
 		model = procmodel.lower()
 	elif fileExists("/proc/stb/info/gbmodel"):
 		brand = "GigaBlue"
-		f = open("/proc/stb/info/gbmodel",'r')
+		f = open("/proc/stb/info/gbmodel", 'r')
 		procmodel = f.readline().strip()
 		f.close()
 		if procmodel == "GBQUAD PLUS":
 			model = procmodel.replace("GBQUAD", "Quad").replace("PLUS", " Plus")
-		elif procmodel == "gb7252":
-			model = procmodel.replace("gb7252", "UHD Quad 4k")
+		elif procmodel == "gbquad4k":
+			model = procmodel.replace("gbquad4k", "UHD Quad 4k")
+		elif procmodel == "gbue4k":
+			model = procmodel.replace("gbue4k", "UHD UE 4k")
 	elif fileExists("/proc/stb/info/vumodel") and not fileExists("/proc/stb/info/boxtype"):
 		brand = "Vu+"
-		f = open("/proc/stb/info/vumodel",'r')
+		f = open("/proc/stb/info/vumodel", 'r')
 		procmodel = f.readline().strip()
 		f.close()
 		model = procmodel.title().replace("olose", "olo SE").replace("olo2se", "olo2 SE").replace("2", "²")
 	elif fileExists("/proc/boxtype"):
-		f = open("/proc/boxtype",'r')
+		f = open("/proc/boxtype", 'r')
 		procmodel = f.readline().strip().lower()
 		f.close()
 		if procmodel in ("adb2850", "adb2849", "bska", "bsla", "bxzb", "bzzb"):
@@ -188,7 +205,7 @@ def getAllInfo():
 			else:
 				model = "ESI 88"
 	elif fileExists("/proc/stb/info/boxtype"):
-		f = open("/proc/stb/info/boxtype",'r')
+		f = open("/proc/stb/info/boxtype", 'r')
 		procmodel = f.readline().strip().lower()
 		f.close()
 		if procmodel.startswith("et"):
@@ -215,7 +232,7 @@ def getAllInfo():
 			model = "4 Turbo"
 		elif procmodel.startswith("formuler"):
 			brand = "Formuler"
-			model = procmodel.replace("formuler","")
+			model = procmodel.replace("formuler", "")
 		elif procmodel.startswith("mbtwinplus"):
 			brand = "Miraclebox"
 			model = "Premium Twin+"
@@ -281,6 +298,7 @@ def getAllInfo():
 		elif procmodel == "hd51":
 			brand = "Mut@nt"
 			model = "HD51"
+			grabpip = 1
 		elif procmodel == "hd11":
 			brand = "Mut@nt"
 			model = "HD11"
@@ -290,6 +308,9 @@ def getAllInfo():
 		elif procmodel == "hd530c":
 			brand = "Mut@nt"
 			model = "HD530c"
+		elif procmodel =="hd60":
+			brand ="Mut@nt"
+			model = "HD60"
 		elif procmodel == "arivalink200":
 			brand = "Ferguson"
 			model = "Ariva @Link 200"
@@ -317,6 +338,9 @@ def getAllInfo():
 		elif procmodel == "vipert2c":
 			brand = "Amiko"
 			model = "ViperT2C"
+		elif procmodel == "vipercombohdd":
+			brand = "Amiko"
+			model = "ViperComboHDD"
 		elif procmodel == "wetekplay":
 			brand = "WeTeK"
 			model = "Play"
@@ -330,6 +354,10 @@ def getAllInfo():
 				model = "OS Mega"
 			elif procmodel == "osnino":
 				model = "OS Nino"
+			elif procmodel == "osninoplus":
+				model = "OS Nino+"
+			elif procmodel == "osninopro":
+				model = "OS Nino Pro"
 			else:
 				model = procmodel
 		elif procmodel == "h3":
@@ -341,9 +369,16 @@ def getAllInfo():
 		elif procmodel == "h5":
 			brand = "Zgemma"
 			model = "H5 series"
+		elif procmodel == "h6":
+			brand = "Zgemma"
+			model = "H6 series"
 		elif procmodel == "h7":
 			brand = "Zgemma"
 			model = "H7 series"
+			grabpip = 1
+		elif procmodel == "h9":
+			brand = "Zgemma"
+			model = "H9 series"
 		elif procmodel == "lc":
 			brand = "Zgemma"
 			model = "LC"
@@ -356,14 +391,21 @@ def getAllInfo():
 		elif procmodel == "vs1500":
 			brand = "Vimastec"
 			model = "vs1500"
+			grabpip = 1
 		elif procmodel == "sf4008":
 			brand = "Octagon"
 			model = procmodel
 		elif procmodel == "u5":
 			brand = "Vivant"
 			model = "Dinobot 4K"
+		elif procmodel == "e4hd":
+			brand = "Axas"
+			model = "E4HD"
+			lcd = 1
+			grabpip = 1
+
 	elif fileExists("/proc/stb/info/model"):
-		f = open("/proc/stb/info/model",'r')
+		f = open("/proc/stb/info/model", 'r')
 		procmodel = f.readline().strip().lower()
 		f.close()
 		if procmodel == "tf7700hdpvr":
@@ -380,7 +422,30 @@ def getAllInfo():
 				model = "Spark"
 		elif (procmodel.startswith("dm") and not procmodel == "dm8000"):
 			brand = "Dream Multimedia"
-			model = procmodel.replace("dm", "DM", 1)
+			if procmodel == "dm800":
+				model = "DM800 HD PVR"
+			elif procmodel == "dm800se":
+				model = "DM800 HD se"
+			elif procmodel == "dm500hd":
+				model = "DM500 HD"
+			elif procmodel == "dm7020hd":
+				model = "DM7020 HD"
+			elif procmodel == "dm820":
+				model = "DM820 HD"
+			elif procmodel == "dm7080":
+				model = "DM7080 HD"
+			elif procmodel == "dm520":
+				model = "DM520 HD"
+			elif procmodel == "dm525":
+				model = "DM525 HD"
+			elif procmodel == "dm900":
+				model = "DM900 HD"
+				grabpip = 1
+			elif procmodel == "dm920":
+				model = "DM920 HD"
+				grabpip = 1
+			else:
+				model = procmodel.replace("dm", "DM", 1)
 		# A "dm8000" is only a Dreambox if it passes the tpm verification:
 		elif procmodel == "dm8000" and orgdream:
 			brand = "Dream Multimedia"
@@ -390,7 +455,7 @@ def getAllInfo():
 
 	if fileExists("/etc/.box"):
 		distro = "HDMU"
-		f = open("/etc/.box",'r')
+		f = open("/etc/.box", 'r')
 		tempmodel = f.readline().strip().lower()
 		if tempmodel.startswith("ufs") or model.startswith("ufc"):
 			brand = "Kathrein"
@@ -406,11 +471,13 @@ def getAllInfo():
 			procmodel = "vg2000"
 
 	type = procmodel
-	if type in ("et9000", "et9100", "et9200", "et9500"):
+	if type in ("et9x00", "et9000", "et9100", "et9200", "et9500"):
 		type = "et9x00"
-	elif type in ("et5000", "et6000", "et6x00"):
+	elif type in ("et6x00", "et6000"):
+		type = "et6x00"
+	elif type in ("et5x00", "et5000"):
 		type = "et5x00"
-	elif type == "et4000":
+	elif type in ("et4x00", "et4000"):
 		type = "et4x00"
 	elif type == "xp1000":
 		type = "xp1000"
@@ -428,7 +495,7 @@ def getAllInfo():
 	info['procmodel'] = procmodel
 	info['type'] = type
 
-	remote = "dmm"
+	remote = "dmm1"
 	if procmodel in ("solo", "duo", "uno", "solo2", "solose", "zero", "solo4k", "uno4k", "ultimo4k"):
 		remote = "vu_normal"
 	elif procmodel == "duo2":
@@ -457,7 +524,7 @@ def getAllInfo():
 		remote = "gigablue"
 	elif procmodel == "gbquadplus":
 		remote = "gbquadplus"
-	elif procmodel == "gb7252":
+	elif procmodel in ("gbquad4k", "gbue4k"):
 		remote = "gb7252"
 	elif procmodel in ("formuler1", "formuler3", "formuler4", "formuler4turbo"):
 		remote = "formuler1"
@@ -493,6 +560,8 @@ def getAllInfo():
 		remote = "hd1x00"
 	elif procmodel == "hd2400":
 		remote = "hd2400"
+	elif procmodel == "hd60":
+		remote = "hd60"
 	elif procmodel in ("spycat", "spycatmini", "spycatminiplus", "spycat4kmini"):
 		remote = "spycat"
 	elif procmodel.startswith("ixuss"):
@@ -507,6 +576,10 @@ def getAllInfo():
 		remote = procmodel
 	elif procmodel.startswith("osm"):
 		remote = "osmini"
+	elif procmodel.startswith("osninopr"):
+		remote = "edision3"
+	elif procmodel.startswith("osninopl"):
+		remote = "edision2"
 	elif procmodel.startswith("osn"):
 		remote = "edision1"
 	elif procmodel in ("fusionhd"):
@@ -519,18 +592,26 @@ def getAllInfo():
 		remote = procmodel
 	elif procmodel in ("galaxy4k"):
 		remote = procmodel
+	elif procmodel in ("lunix3-4k", "lunix"):
+		remote = "qviart"
 	elif procmodel in ("sh1", "lc"):
 		remote = "sh1"
-	elif procmodel in ("h3", "h4", "h5", "h7"):
+	elif procmodel in ("h3", "h4", "h5", "h6", "h7"):
 		remote = "h3"
+	elif procmodel == "h9":
+		remote = "h9"
 	elif procmodel == "i55":
 		remote = "i55"
 	elif procmodel in ("vipercombo", "vipert2c"):
 		remote = "amiko"
+	elif procmodel in ("vipercombohdd"):
+		remote = "amiko1"
 	elif procmodel == "sf4008":
 		remote = "octagon"
 	elif procmodel in ("vs1100", "vs1500"):
 		remote = "vs1x00"
+	elif procmodel in ("e4hd"):
+		remote = "e4hd"
 
 	info['remote'] = remote
 
@@ -543,7 +624,7 @@ def getAllInfo():
 
 	# Assume OE 1.6
 	oever = "OE 1.6"
-	if kernel>2:
+	if kernel > 2:
 		oever = "OE 2.0"
 
 	if fileExists("/etc/.box"):
@@ -551,21 +632,21 @@ def getAllInfo():
 		oever = "private"
 	elif fileExists("/etc/bhversion"):
 		distro = "Black Hole"
-		f = open("/etc/bhversion",'r')
+		f = open("/etc/bhversion", 'r')
 		imagever = f.readline().strip()
 		f.close()
-		if kernel>2:
+		if kernel > 2:
 			oever = "OpenVuplus 2.1"
 	elif fileExists("/etc/vtiversion.info"):
 		distro = "VTi-Team Image"
-		f = open("/etc/vtiversion.info",'r')
+		f = open("/etc/vtiversion.info", 'r')
 		imagever = f.readline().strip().replace("VTi-Team Image ", "").replace("Release ", "").replace("v.", "")
 		f.close()
 		oever = "OE 1.6"
 		imagelist = imagever.split('.')
 		imagebuild = imagelist.pop()
 		imagever = ".".join(imagelist)
-		if kernel>2:
+		if kernel > 2:
 			oever = "OpenVuplus 2.1"
 		if ((imagever == "5.1") or (imagever[0] > 5)):
 			oever = "OpenVuplus 2.1"
@@ -573,7 +654,7 @@ def getAllInfo():
 		distro = "Graterlia OS"
 		try:
 			imagever = about.getImageVersionString()
-		except: # nosec
+		except:  # nosec  # noqa: E722
 			pass
 	# ToDo: If your distro gets detected as OpenPLi, feel free to add a detection for your distro here ...
 	else:
@@ -582,11 +663,11 @@ def getAllInfo():
 			oever = "OE 2.2"
 		else:
 			try:
-				f = open("/etc/opkg/all-feed.conf",'r')
+				f = open("/etc/opkg/all-feed.conf", 'r')
 				oeline = f.readline().strip().lower()
 				f.close()
-				distro = oeline.split( )[1].replace("-all","")
-			except: # nosec
+				distro = oeline.split( )[1].replace("-all", "")
+			except:  # nosec  # noqa: E722
 				pass
 
 		if distro == "openpli":
@@ -600,7 +681,7 @@ def getAllInfo():
 					# deal with major release versions only
 					if imagever.isnumeric():
 						imagebuild = "0"
-			except: # nosec
+			except:  # nosec  # noqa: E722
 				# just in case
 				pass
 		elif distro == "openrsi":
@@ -608,29 +689,29 @@ def getAllInfo():
 		else:
 			try:
 				imagever = about.getImageVersionString()
-			except: # nosec
+			except:  # nosec  # noqa: E722
 				pass
 
 		if (distro == "unknown" and brand == "Vu+" and fileExists("/etc/version")):
 			# Since OE-A uses boxbranding and bh or vti can be detected, there isn't much else left for Vu+ boxes
 			distro = "Vu+ original"
-			f = open("/etc/version",'r')
+			f = open("/etc/version", 'r')
 			imagever = f.readline().strip()
 			f.close()
-			if kernel>2:
+			if kernel > 2:
 				oever = "OpenVuplus 2.1"
 
 	# reporting the installed dvb-module version is as close as we get without too much hassle
 	driverdate = 'unknown'
 	try:
-		driverdate = os.popen('/usr/bin/opkg -V0 list_installed *dvb-modules*').readline().split( )[2] # nosec
-	except:
+		driverdate = os.popen('/usr/bin/opkg -V0 list_installed *dvb-modules*').readline().split( )[2]  # nosec
+	except:  # noqa: E722
 		try:
-			driverdate = os.popen('/usr/bin/opkg -V0 list_installed *dvb-proxy*').readline().split( )[2] # nosec
-		except:
+			driverdate = os.popen('/usr/bin/opkg -V0 list_installed *dvb-proxy*').readline().split( )[2]  # nosec
+		except:  # noqa: E722
 			try:
-				driverdate = os.popen('/usr/bin/opkg -V0 list_installed *kernel-core-default-gos*').readline().split( )[2] # nosec
-			except: # nosec
+				driverdate = os.popen('/usr/bin/opkg -V0 list_installed *kernel-core-default-gos*').readline().split( )[2]  # nosec
+			except:  # nosec # noqa: E722
 				pass
 
 	info['oever'] = oever
@@ -638,40 +719,58 @@ def getAllInfo():
 	info['imagever'] = imagever
 	info['imagebuild'] = imagebuild
 	info['driverdate'] = driverdate
-
+	info['lcd'] = distro in ("openpli",) and lcd or 0
+	info['grabpip'] = distro in ("openpli",) and grabpip or 0
 	return info
 
+
 STATIC_INFO_DIC = getAllInfo()
+
 
 def getMachineBuild():
 	return STATIC_INFO_DIC['procmodel']
 
+
 def getMachineBrand():
 	return STATIC_INFO_DIC['brand']
+
 
 def getMachineName():
 	return STATIC_INFO_DIC['model']
 
+
 def getMachineProcModel():
 	return STATIC_INFO_DIC['procmodel']
+
 
 def getBoxType():
 	return STATIC_INFO_DIC['type']
 
+
 def getOEVersion():
 	return STATIC_INFO_DIC['oever']
+
 
 def getDriverDate():
 	return STATIC_INFO_DIC['driverdate']
 
+
 def getImageVersion():
 	return STATIC_INFO_DIC['imagever']
+
 
 def getImageBuild():
 	return STATIC_INFO_DIC['imagebuild']
 
+
 def getImageDistro():
 	return STATIC_INFO_DIC['distro']
+
+def getLcd():
+	return STATIC_INFO_DIC['lcd']
+
+def getGrabPip():
+	return STATIC_INFO_DIC['grabpip']
 
 class rc_model:
 	def getRcFolder(self):

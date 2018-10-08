@@ -1,8 +1,35 @@
-## Version 1.2.8
+## Version 1.3.5
 ## (in development)
+* add picon value to getservices request #849
+* add genre to epg result #847
+
+## Version 1.3.4
+* Autotimer backup/restore
+
+## Version 1.3.3
+* get group members of alternative group in servicelist of bqe
+* improve channel numbering for bqe
+
+## Version 1.3.2
+* reorg i18n
+* move some code to new defaults controller
+* optimize web api for UI settings
+
+## Version 1.3.1
+* add net api mount manager
+* fix encoding issue #772
+* add settings to modify recording locations / bookmarks
+* add timer sort feature #697
+* fix edit timer tags #732
+
+## Version 1.3.0
+* add responsive design from VTi Team
+* RESTful API with OpenAPI specification
+* new config api
+
+## Version 1.2.8
 * new file api
 * new RESTful API with OpenAPI specification
-* new config api
 * allow timers for IPTV / #715
 
 ## Version 1.2.7
