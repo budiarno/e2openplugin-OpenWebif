@@ -849,11 +849,10 @@ function grabScreenshot(mode) {
 	} else {
 		mode = screenshotMode;
 	}
-	timestamp = new Date().getTime();
 	if (GetLSValue('ssr_hd',false)){
-		$('#screenshotimage').attr("src",'/grab?format=jpg&mode=' + mode + '#' + timestamp);
+		$('#screenshotimage').attr("src",'/grab?format=jpg&mode=' + mode);
 	} else {
-		$('#screenshotimage').attr("src",'/grab?format=jpg&r=720&mode=' + mode + '#' + timestamp);
+		$('#screenshotimage').attr("src",'/grab?format=jpg&r=720&mode=' + mode);
 	}
 	if (mode == "lcd") {
 		$('#screenshotimage').attr("width", 'auto');
