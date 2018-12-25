@@ -612,6 +612,8 @@ def getAllInfo():
 		remote = "vs1x00"
 	elif procmodel in ("e4hd"):
 		remote = "e4hd"
+	elif procmodel in ("u5"):
+		remote = "dinobot"
 
 	info['remote'] = remote
 
